@@ -148,9 +148,9 @@ SIMPLE_JWT = {
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'  # SMTP server for Gmail
+EMAIL_HOST = 'smtp.office365.com'  # SMTP server for Gmail
 EMAIL_PORT = 587  # TLS port
 EMAIL_USE_TLS = True  # Enable TLS (for secure connection)
-EMAIL_HOST_USER = 'your_email@gmail.com'  # Your email address
-EMAIL_HOST_PASSWORD = 'your_email_password'  # Your email password (or app password if 2FA is enabled)
-DEFAULT_FROM_EMAIL = 'your_email@gmail.com'  # Default from email address
+EMAIL_HOST_USER = 'tealappmailer1@titan.co.com'  # Your email address
+EMAIL_HOST_PASSWORD = 'Teal@2023'  # Your email password (or app password if 2FA is enabled)
+DEFAULT_FROM_EMAIL = 'tealappmailer1@titan.co.com'  # Default from email address
