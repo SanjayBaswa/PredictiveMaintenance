@@ -27,6 +27,7 @@ urlpatterns = [
     path('sensordata/', pred.get_sensor_data),
     path('datalog_sensor/', pred.datalog_sensor_list),
     path('error_log/', pred.error_log),
+    path('test_mail/', pred.send_email),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

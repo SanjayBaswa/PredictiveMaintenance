@@ -113,3 +113,14 @@ def error_log(request):
             return Response({"message": "error logged successfully"}, status=status.HTTP_201_CREATED)
         else:
             return Response(error_log_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+from django.core.mail import send_mail
+@api_view(['POST'])
+def send_email(requests):
+    subject = 'Hello from Django'
+    message = 'This is a test email sent from Django.'
+    from_email = 'tealappmailer1@titan.co.in'  # The sender's email address
+    recipient_list = ['sanjaybaswa@titan.co.in']  # A list of recipient emails
+    send_mail(subject, message, from_email, recipient_list)
+
+    return JsonResponse({'status':'sucess'}, safe=False)
