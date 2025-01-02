@@ -12,7 +12,9 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from datetime import datetime, timedelta
 from asyncio import sleep
+from django.db.models.functions import TruncHour
 import os
+from django.db.models import Max
 
 # from .LSTM import ModelBuilder
 
@@ -24,6 +26,7 @@ async def my_async_view(request):
     return JsonResponse({"message": "This is an async response!"})
 
 
+@api_view(['GET'])
 def is_server_live(requests):
     return JsonResponse({"status": "True"}, safe=False)
 
@@ -68,8 +71,8 @@ def get_sensor_data(request):
         return JsonResponse({'error': f'{e}'}, safe=False)
 
 
-def train_model(requests, element_id, records):
-    MANDATORY_FIELD = ['element_id', 'count', 'epochs']
+def train_model(requests):
+    MANDATORY_FIELD = ['element_id', 'start_time', 'end_time', 'epochs']
 
     # model = ModelBuilder.build_model(f'{MODEL_MAIN_PATH}{element_id}/{str(datetime.now().strftime("%Y%m%d%H%M%S"))}.h5',
     #                                  records, 200)
@@ -113,3 +116,16 @@ def error_log(request):
             return Response({"message": "error logged successfully"}, status=status.HTTP_201_CREATED)
         else:
             return Response(error_log_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+def test_function(requests):
+    start_time = '2024-12-20 00:00:00'
+    end_time = '2024-12-20 01:00:00'
+
+    # hour_labeled = SensorDataLog.objects.filter(timestamp__range=[start_time, end_time], element_id='S19').annotate(
+    #     hour=TruncHour('timestamp')).values('hour')
+
+    hour_labeled = SensorDataLog.objects.filter(timestamp__range=[start_time, end_time], element_id='S19').values('timestamp')
+
+    return JsonResponse(list(hour_labeled.values()), safe=False)

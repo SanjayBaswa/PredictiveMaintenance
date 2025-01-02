@@ -15,7 +15,7 @@ class ModelBuilder:
         self.epochs = epochs
         self.loss = 'mean_squared_error'
         self.optimizer = 'adam'
-        self.sequence_length = 32
+        self.sequence_length = 10
         self.model_path = model_path
         self.train_split_percentage = 0.8
         self.data = input_data
@@ -68,11 +68,9 @@ class ModelBuilder:
 
 
 if __name__ == '__main__':
-
     data = [i for i in range(112)]
     pre = [i for i in range(80, 112)]
     # ModelBuilder('last_dance', data, 100).build_model()
     LSTM_B = ModelBuilder('last_dance', data, 200)
-
     LSTM_B.build_model()
     LSTM_B.predict(pre)

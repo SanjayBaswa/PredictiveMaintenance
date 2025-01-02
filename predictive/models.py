@@ -56,3 +56,5 @@ class ErrorLog(models.Model):
 
     def __str__(self):
         return f"{self.service}-{self.error_category} - {self.severity} - {self.timestamp}"
+
+

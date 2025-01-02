@@ -20,6 +20,7 @@ from django.urls import path, include
 from predictive import views as pred
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+
 urlpatterns = [
     path('check_server/', pred.is_server_live),
     path('datalog/', pred.datalog),
@@ -27,6 +28,7 @@ urlpatterns = [
     path('sensordata/', pred.get_sensor_data),
     path('datalog_sensor/', pred.datalog_sensor_list),
     path('error_log/', pred.error_log),
+    path('test/', pred.test_function),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
