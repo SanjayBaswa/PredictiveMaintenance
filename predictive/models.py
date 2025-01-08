@@ -10,12 +10,13 @@ class SensorDataLog(models.Model):
     max = models.DecimalField(max_digits=8, decimal_places=4)
     min = models.DecimalField(max_digits=8, decimal_places=4)
     avg = models.DecimalField(max_digits=8, decimal_places=4)
+    rec_train_data = models.BooleanField(default=False)
     no_of_records = models.IntegerField()
     timestamp = models.DateTimeField()
     org_id = models.CharField(max_length=255)
 
     def __str__(self):
-        return f"{self.max}-{self.min} - {self.avg} - {self.timestamp}"
+        return f"{self.element_id}-{self.max}-{self.min} - {self.avg} - {self.timestamp}"
 
 
 class SettingsOrg(models.Model):
@@ -36,13 +37,14 @@ class SettingsElement(models.Model):
     server_ip = models.CharField(max_length=255, null=False)
     machine_code = models.CharField(max_length=255, null=False)
     element_type = models.CharField(max_length=255, null=False)
+    model_path = models.CharField(max_length=255, default= 'model not created')
     remarks = models.TextField()
     org_id = models.CharField(max_length=255, null=False)
     active = models.BooleanField(default=True)
     prediction = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.element_id}-{self.element_name} - {self.element_type} - {self.active}"
+        return f"{self.element_id}-{self.element_id}-{self.element_name} - {self.element_type} - {self.active}"
 
 
 class ErrorLog(models.Model):
@@ -58,3 +60,13 @@ class ErrorLog(models.Model):
         return f"{self.service}-{self.error_category} - {self.severity} - {self.timestamp}"
 
 
+class ModelLog(models.Model):
+    id = models.AutoField(primary_key=True)
+    start_time = models.DateTimeField()
+    model_path = models.CharField(max_length=255, null=False)
+    model_created = models.BooleanField()
+    remarks = models.TextField()
+    log_time = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.id}-{self.start_time} - {self.model_created} - {self.log_time}"

@@ -1,3 +1,5 @@
+import time
+
 from django.shortcuts import render
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
@@ -15,8 +17,7 @@ from asyncio import sleep
 from django.db.models.functions import TruncHour
 import os
 from django.db.models import Max
-
-# from .LSTM import ModelBuilder
+from sklearn.ensemble import IsolationForest
 
 MODEL_MAIN_PATH = 'all_models/'
 
@@ -71,12 +72,45 @@ def get_sensor_data(request):
         return JsonResponse({'error': f'{e}'}, safe=False)
 
 
+@api_view(['POST'])
 def train_model(requests):
-    MANDATORY_FIELD = ['element_id', 'start_time', 'end_time', 'epochs']
+    if requests.method == 'POST':
+        MANDATORY_FIELD = ['element_id', 'start_time', 'end_time', 'epochs']
+        min_data_to_train = 80
+        train_params = requests.data
+        if set(MANDATORY_FIELD).issubset(set(train_params)):
+            element_list = SettingsElement.objects.filter(prediction='True').values('element_id')
+            if train_params['element_id'] in [element['element_id'] for element in list(element_list)]:
+                hour_labeled = SensorDataLog.objects.filter(
+                    timestamp__range=[train_params['start_time'], train_params['end_time']], element_id='S19').annotate(
+                    hour=TruncHour('timestamp')).values('hour').annotate(hourly_max=Max('max')).values('hour',
+                                                                                                       'hourly_max')
+                train_data = [int(object['hourly_max']) for object in hour_labeled]
+                if len(train_data) >= min_data_to_train:
+                    modeling_start_time = datetime.now()
+                    model_path = f'{MODEL_MAIN_PATH}{train_params['element_id']}'
+                    try:
+                        from .LSTM import ModelBuilder
+                        model = ModelBuilder( train_params['element_id'] , model_path, train_data, train_params['epochs'])
+                        res , msg = model.build_model()
+                        if res:
+                            ModelLog(start_time=str(modeling_start_time),model_path=model_path,model_created='True',remarks='Successfully created',log_time=str(datetime.now())).save()
+                            SettingsElement.objects.filter( element_id = train_params['element_id']).update(model_path = msg)
+                            return JsonResponse({"message": f"Model Created"}, safe=False)
+                        else:
+                            ModelLog(start_time=str(modeling_start_time), model_path=msg, model_created='True',remarks= msg, log_time=str(datetime.now())).save()
+                            return JsonResponse({"message":msg }, safe=False)
+                    except Exception as e:
+                        ModelLog(start_time=str(modeling_start_time), model_path=model_path, model_created='False',remarks= e, log_time=str(datetime.now())).save()
+                        return JsonResponse({"message": e}, safe=False)
+                else:
+                    return JsonResponse({"message": f"Need min of {min_data_to_train} datas got {len(train_data)}"},
+                                        safe=False)
+            else:
+                return JsonResponse({"message": f"check element id in settings with prediction enabled"}, safe=False)
 
-    # model = ModelBuilder.build_model(f'{MODEL_MAIN_PATH}{element_id}/{str(datetime.now().strftime("%Y%m%d%H%M%S"))}.h5',
-    #                                  records, 200)
-    pass
+        else:
+            return JsonResponse({"message": f"parameters not matched , expected {MANDATORY_FIELD}"}, safe=False)
 
 
 @receiver(post_save, sender=SettingsElement)
@@ -121,11 +155,11 @@ def error_log(request):
 @api_view(['GET'])
 def test_function(requests):
     start_time = '2024-12-20 00:00:00'
-    end_time = '2024-12-20 01:00:00'
+    end_time = '2024-12-21 00:00:00'
 
-    # hour_labeled = SensorDataLog.objects.filter(timestamp__range=[start_time, end_time], element_id='S19').annotate(
-    #     hour=TruncHour('timestamp')).values('hour')
+    hour_labeled = SensorDataLog.objects.filter(timestamp__range=[start_time, end_time], element_id='S19').annotate(
+        hour=TruncHour('timestamp')).values('hour').annotate(hourly_max=Max('max')).values('hour', 'hourly_max')
 
-    hour_labeled = SensorDataLog.objects.filter(timestamp__range=[start_time, end_time], element_id='S19').values('timestamp')
+    train_data = [object['hourly_max'] for object in hour_labeled]
 
-    return JsonResponse(list(hour_labeled.values()), safe=False)
+    return JsonResponse(train_data, safe=False)

@@ -29,6 +29,8 @@ urlpatterns = [
     path('datalog_sensor/', pred.datalog_sensor_list),
     path('error_log/', pred.error_log),
     path('test/', pred.test_function),
+    path('train_model/', pred.train_model),
+    # path('anomaly/', pred.anamolay_detector),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
