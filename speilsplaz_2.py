@@ -1,21 +1,23 @@
+
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
 
-data = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 9, 1, 1, 1, 1, 1, 22, 2, 2, 2, 2, 2, 2
-    , 2, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1]
+# Create a simple dataset (5 samples, 2 features)
+data = np.array([[1],[2],[3],[4],[5]])
 
-an = []
+# Initialize MinMaxScaler to scale data between 0 and 1
+scaler = MinMaxScaler(feature_range=(0, 1))
 
-for i in data:
-    if i > 4:
-        an.append(-1)
-    else:
-        an.append(1)
+# Fit the scaler to the data and transform it
+scaled_data = scaler.fit_transform(data)
 
-data = np.array(data)
-an = np.array(an)
+# Now descaling (inverse scaling)
+descaled_data = scaler.inverse_transform(scaled_data)
 
-k = data[an == -1]
-print(k , type(list(k)))
-
+# Print the original data, scaled data, and descaled data
+print("Original Data:")
 print(data)
-print(an)
+print("\nScaled Data (Min-Max Scaling):")
+print(scaled_data)
+print("\nDescaled Data (Inverse Min-Max Scaling):")
+print(descaled_data)

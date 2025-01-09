@@ -18,6 +18,8 @@ from django.db.models.functions import TruncHour
 import os
 from django.db.models import Max
 from sklearn.ensemble import IsolationForest
+from .LSTM import ModelBuilder, predictor
+import shutil
 
 MODEL_MAIN_PATH = 'all_models/'
 
@@ -82,7 +84,8 @@ def train_model(requests):
             element_list = SettingsElement.objects.filter(prediction='True').values('element_id')
             if train_params['element_id'] in [element['element_id'] for element in list(element_list)]:
                 hour_labeled = SensorDataLog.objects.filter(
-                    timestamp__range=[train_params['start_time'], train_params['end_time']], element_id='S19').annotate(
+                    timestamp__range=[train_params['start_time'], train_params['end_time']],
+                    element_id=train_params['element_id']).annotate(
                     hour=TruncHour('timestamp')).values('hour').annotate(hourly_max=Max('max')).values('hour',
                                                                                                        'hourly_max')
                 train_data = [int(object['hourly_max']) for object in hour_labeled]
@@ -90,18 +93,21 @@ def train_model(requests):
                     modeling_start_time = datetime.now()
                     model_path = f'{MODEL_MAIN_PATH}{train_params['element_id']}'
                     try:
-                        from .LSTM import ModelBuilder
-                        model = ModelBuilder( train_params['element_id'] , model_path, train_data, train_params['epochs'])
-                        res , msg = model.build_model()
+
+                        model = ModelBuilder(train_params['element_id'], model_path, train_data)
+                        res, msg = model.build_model()
                         if res:
-                            ModelLog(start_time=str(modeling_start_time),model_path=model_path,model_created='True',remarks='Successfully created',log_time=str(datetime.now())).save()
-                            SettingsElement.objects.filter( element_id = train_params['element_id']).update(model_path = msg)
+                            ModelLog(start_time=str(modeling_start_time), model_path=msg, model_created='True',
+                                     remarks='Successfully created', log_time=str(datetime.now())).save()
+                            SettingsElement.objects.filter(element_id=train_params['element_id']).update(model_path=msg)
                             return JsonResponse({"message": f"Model Created"}, safe=False)
                         else:
-                            ModelLog(start_time=str(modeling_start_time), model_path=msg, model_created='True',remarks= msg, log_time=str(datetime.now())).save()
-                            return JsonResponse({"message":msg }, safe=False)
+                            ModelLog(start_time=str(modeling_start_time), model_path=msg, model_created='True',
+                                     remarks=msg, log_time=str(datetime.now())).save()
+                            return JsonResponse({"message": msg}, safe=False)
                     except Exception as e:
-                        ModelLog(start_time=str(modeling_start_time), model_path=model_path, model_created='False',remarks= e, log_time=str(datetime.now())).save()
+                        ModelLog(start_time=str(modeling_start_time), model_path=model_path, model_created='False',
+                                 remarks=e, log_time=str(datetime.now())).save()
                         return JsonResponse({"message": e}, safe=False)
                 else:
                     return JsonResponse({"message": f"Need min of {min_data_to_train} datas got {len(train_data)}"},
@@ -121,7 +127,7 @@ def create_model_folder(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=SettingsElement)
 def delete_model_folder(sender, instance, **kwargs):
-    os.rmdir(MODEL_MAIN_PATH + str(instance.element_id))
+    shutil.rmtree(MODEL_MAIN_PATH + str(instance.element_id))
 
 
 @api_view(['POST'])
@@ -163,3 +169,37 @@ def test_function(requests):
     train_data = [object['hourly_max'] for object in hour_labeled]
 
     return JsonResponse(train_data, safe=False)
+
+
+@api_view(['GET'])
+def predict_data(requests):
+    params = requests.data
+    element_list = SettingsElement.objects.filter(prediction='True').values('element_id')
+    if params['element_id'] in [element['element_id'] for element in list(element_list)]:
+        model_path = SettingsElement.objects.filter(element_id=params['element_id']).values('model_path')
+        res = predictor(params['data'], model_path[0]['model_path'])
+        if res[0]:
+            return JsonResponse(res[2].tolist(), safe=False)
+        else:
+            return JsonResponse(res[1], safe=False)
+    return JsonResponse({"msg": "element is not in settings"}, safe=False)
+
+
+@api_view(['GET'])
+def element_raw_data_hourly(requests):
+    start_time = '2024-12-20 00:00:00'
+    end_time = '2024-12-21 00:00:00'
+    element_id = 'S19'
+    hour_labeled = SensorDataLog.objects.filter(timestamp__range=[start_time, end_time],
+                                                element_id=element_id).annotate(
+        hour=TruncHour('timestamp')).values('hour').annotate(hourly_max=Max('max')).values('hour', 'hourly_max')
+
+    hours = [str(object['hour']).split(':')[0] for object in hour_labeled]
+    hourly_data = [object['hourly_max'] for object in hour_labeled]
+
+    data = {
+        'Hour' : hours ,
+        'value' : hourly_data
+    }
+
+    return JsonResponse(data, safe=False)
