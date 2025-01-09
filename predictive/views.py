@@ -199,7 +199,8 @@ def element_raw_data_hourly(requests):
 
     data = {
         'Hour' : hours ,
-        'value' : hourly_data
+        'value' : hourly_data ,
+        'type'  : ['0']*len(hourly_data)
     }
 
     return JsonResponse(data, safe=False)
