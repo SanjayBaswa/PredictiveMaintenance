@@ -18,7 +18,7 @@ from django.db.models.functions import TruncHour
 import os
 from django.db.models import Max
 from sklearn.ensemble import IsolationForest
-from .LSTM import ModelBuilder, predictor
+from .LSTM import ModelBuilder
 import shutil
 
 MODEL_MAIN_PATH = 'all_models/'
@@ -91,11 +91,11 @@ def train_model(requests):
                 train_data = [int(object['hourly_max']) for object in hour_labeled]
                 if len(train_data) >= min_data_to_train:
                     modeling_start_time = datetime.now()
-                    model_path = f'{MODEL_MAIN_PATH}{train_params['element_id']}'
+                    model_path = f"{MODEL_MAIN_PATH}{train_params['element_id']}"
                     try:
-
-                        model = ModelBuilder(train_params['element_id'], model_path, train_data)
-                        res, msg = model.build_model()
+                        model = ModelBuilder(train_params['element_id'], model_path)
+                        res, msg = model.build_model(train_data)
+                        print(res, msg)
                         if res:
                             ModelLog(start_time=str(modeling_start_time), model_path=msg, model_created='True',
                                      remarks='Successfully created', log_time=str(datetime.now())).save()
@@ -104,11 +104,11 @@ def train_model(requests):
                         else:
                             ModelLog(start_time=str(modeling_start_time), model_path=msg, model_created='True',
                                      remarks=msg, log_time=str(datetime.now())).save()
-                            return JsonResponse({"message": msg}, safe=False)
+                            return JsonResponse({"error": str(msg)}, safe=False)
                     except Exception as e:
                         ModelLog(start_time=str(modeling_start_time), model_path=model_path, model_created='False',
                                  remarks=e, log_time=str(datetime.now())).save()
-                        return JsonResponse({"message": e}, safe=False)
+                        return JsonResponse({"error": e}, safe=False)
                 else:
                     return JsonResponse({"message": f"Need min of {min_data_to_train} datas got {len(train_data)}"},
                                         safe=False)
@@ -134,14 +134,14 @@ def delete_model_folder(sender, instance, **kwargs):
 def datalog_sensor_list(request):
     res = {}
     sensor_list = SettingsElement.objects.filter(active=True)
-    sensor = list(sensor_list.values('element_id', 'tag', 'org_id', 'server_ip'))
+    sensor = list(sensor_list.values('element_id', 'tag', 'org_id', 'server_ip', 'rec_train_data'))
 
     for i in sensor:
         try:
             res[i['server_ip']]
         except:
             res[i['server_ip']] = {}
-        res[i['server_ip']][i['element_id']] = [i['tag'], i['org_id']]
+        res[i['server_ip']][i['element_id']] = [i['tag'], i['org_id'], i['rec_train_data']]
 
     return JsonResponse(res, safe=False)
 
@@ -173,16 +173,22 @@ def test_function(requests):
 
 @api_view(['GET'])
 def predict_data(requests):
+
+    MANDATORY_FIELD = ['element_id', 'data']
     params = requests.data
-    element_list = SettingsElement.objects.filter(prediction='True').values('element_id')
-    if params['element_id'] in [element['element_id'] for element in list(element_list)]:
-        model_path = SettingsElement.objects.filter(element_id=params['element_id']).values('model_path')
-        res = predictor(params['data'], model_path[0]['model_path'])
-        if res[0]:
-            return JsonResponse(res[2].tolist(), safe=False)
-        else:
-            return JsonResponse(res[1], safe=False)
-    return JsonResponse({"msg": "element is not in settings"}, safe=False)
+    if set(MANDATORY_FIELD).issubset(set(params)):
+        element_list = SettingsElement.objects.filter(prediction='True').values('element_id')
+        if params['element_id'] in [element['element_id'] for element in list(element_list)]:
+            model_path = SettingsElement.objects.filter(element_id=params['element_id']).values('model_path')
+            print(model_path)
+            return JsonResponse(list(model_path), safe=False)
+            # res = ModelBuilder( params['element_id'] ).predict(params['data'] ,model_path )
+            if res[0]:
+                return JsonResponse(res[2].tolist(), safe=False)
+            else:
+                return JsonResponse(res[1], safe=False)
+        return JsonResponse({"msg": "element is not in settings"}, safe=False)
+    return JsonResponse({"msg": f"Missing Mandatory '{MANDATORY_FIELD}' fields"}, safe=False)
 
 
 @api_view(['GET'])
@@ -198,9 +204,9 @@ def element_raw_data_hourly(requests):
     hourly_data = [object['hourly_max'] for object in hour_labeled]
 
     data = {
-        'Hour' : hours ,
-        'value' : hourly_data ,
-        'type'  : ['0']*len(hourly_data)
+        'Hour': hours,
+        'value': hourly_data,
+        'type': ['0'] * len(hourly_data)
     }
 
     return JsonResponse(data, safe=False)

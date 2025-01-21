@@ -38,6 +38,7 @@ class SettingsElement(models.Model):
     machine_code = models.CharField(max_length=255, null=False)
     element_type = models.CharField(max_length=255, null=False)
     model_path = models.CharField(max_length=255, default= 'model not created')
+    rec_train_data = models.BooleanField(default=False)
     remarks = models.TextField()
     org_id = models.CharField(max_length=255, null=False)
     active = models.BooleanField(default=True)
@@ -52,8 +53,7 @@ class ErrorLog(models.Model):
     service = models.CharField(max_length=255, null=False)
     error_category = models.CharField(max_length=255, null=False)
     error_text = models.TextField()
-    severity = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)],
-                                   help_text="severity must be between 1 to 10 ( integer ) ")
+    severity = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)],help_text="severity must be between 1 to 10 ( integer ) ")
     timestamp = models.DateTimeField()
 
     def __str__(self):
