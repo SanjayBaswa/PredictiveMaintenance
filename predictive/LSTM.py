@@ -15,14 +15,80 @@ import json
 import shutil
 
 
+def anamoly_limits(data, multiplier=1.5):
+    try:
+        data = sorted(data)
+        print(data)
+        q1 = np.percentile(data, 25)
+        q3 = np.percentile(data, 75)
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+        print(lower_bound, upper_bound)
+        return {
+            'status': True,
+            'upper_limit': upper_bound,
+            'lower_limit': lower_bound,
+            'q3': q3,
+            'q1': q1,
+        }
+    except Exception as E:
+        return {
+            'status': False,
+            'error': E
+        }
+
+
+def predictor(prediction_data, path, sequence_length, no_of_pred=1, result=False):
+    model_path = ''
+    scaler_path = ''
+    predictions = []
+    maximum_prediction = 10
+    if os.path.exists(path):
+        print(path)
+        for file in os.listdir(path):
+            if file.split('.')[-1] == 'h5':
+                model_path = f'{path}/{file}'
+            elif file.split('.')[-1] == 'pkl':
+                scaler_path = f'{path}/{file}'
+        if model_path != '' and scaler_path != '':
+
+            if len(prediction_data) == sequence_length:
+                try:
+                    if no_of_pred <= maximum_prediction:
+                        for i in range(no_of_pred):
+                            data = np.array(prediction_data).reshape(-1, 1)
+                            train_data_scaler = joblib.load(scaler_path)
+                            scaled = train_data_scaler.transform(data)
+                            shaped = np.array(scaled).reshape((1, sequence_length, 1))
+                            model = load_model(model_path)
+                            prediction = model.predict(shaped)
+                            descaled_prediction = train_data_scaler.inverse_transform(prediction)
+                            predictions.append(descaled_prediction.tolist()[0][0])
+                            prediction_data.pop(0)
+                            prediction_data.append(descaled_prediction.tolist()[0][0])
+                        if result: return True, predictions
+                        return True, path
+                    return False, f'no of predictions should be less than or equal to {maximum_prediction} but got {no_of_pred}'
+                except Exception as e:
+                    return False, f'Error : {e}'
+
+            else:
+                return False, f'expected sequence length {sequence_length} got {len(prediction_data)}'
+        else:
+            return False, f'Model/scaler files not found'
+    else:
+        return False, f'{path} path not exist'
+
+
 class ModelBuilder:
-    def __init__(self, element,path = 'default/' , epochs=100, ):
+    def __init__(self, element, path='default/', epochs=100, sequence_length=10):
         self.scaler = None
         self.batch_size = 32
         self.epochs = epochs
         self.loss = 'mean_squared_error'
         self.optimizer = 'adam'
-        self.sequence_length = 10
+        self.sequence_length = sequence_length
         self.path = path
         self.train_split_percentage = 0.8
         self.data = None
@@ -61,73 +127,28 @@ class ModelBuilder:
             history = model.fit(X, y, epochs=self.epochs)
             main_path = f'{self.path}{str(datetime.now().strftime("%Y%m%d%H%M%S"))}'
             if not os.path.exists(main_path): os.makedirs(main_path)
-            model_metrics = {'loss' : history.history['loss'] ,}
+            model_metrics = {'loss': history.history['loss'], }
             with open(f'{main_path}/{self.element}_metrics.json', 'w') as json_file:
                 json.dump(model_metrics, json_file, indent=4)
             model.save(f'{main_path}/{self.element}-{self.epochs}-{self.sequence_length}.h5')
             joblib.dump(self.scaler, f'{main_path}/{self.element}_scaler.pkl')
             self.model_path = main_path
-            return self.predict(self.data[-self.sequence_length:], main_path)
+            return predictor(self.data[-self.sequence_length:], main_path, self.sequence_length)
         except Exception as e:
-            return False , e
+            return False, e
 
-    def predict(self, prediction_data, path , no_of_pred = 1 ):
-        model_path = ''
-        scaler_path = ''
-        if os.path.exists(path):
-            for file in os.listdir(path):
-                if file.split('.')[-1] == 'h5':
-                    model_path = f'{path}/{file}'
-                elif file.split('.')[-1] == 'pkl':
-                    scaler_path = f'{path}/{file}'
-            if model_path != '' and scaler_path != '':
-                for _ in range(no_of_pred):
-                    data = np.array(prediction_data).reshape(-1, 1)
-                    train_data_scaler = joblib.load(scaler_path)
-                    scaled = train_data_scaler.transform(data)
-                    shaped = np.array(scaled).reshape((1, self.sequence_length, 1))
-                    model = load_model(model_path)
-                    prediction = model.predict(shaped)
-                    descaled_prediction = train_data_scaler.inverse_transform(prediction)
-                    return True , path , descaled_prediction
-            else:
-                return False , f'Model/scaler files not found'
-        else:
-            return False , f'{path} path not exist'
-
-    def predict1(self, prediction_data, path, no_of_pred=1):
-        model_path = ''
-        scaler_path = ''
-        if os.path.exists(path):
-            for file in os.listdir(path):
-                if file.split('.')[-1] == 'h5':
-                    model_path = f'{path}/{file}'
-                elif file.split('.')[-1] == 'pkl':
-                    scaler_path = f'{path}/{file}'
-            if model_path != '' and scaler_path != '':
-                data = np.array(prediction_data).reshape(-1, 1)
-                train_data_scaler = joblib.load(scaler_path)
-                scaled = train_data_scaler.transform(data)
-                shaped = np.array(scaled).reshape((1, self.sequence_length, 1))
-                model = load_model(model_path)
-                prediction = model.predict(shaped)
-                descaled_prediction = train_data_scaler.inverse_transform(prediction)
-                return True, path
-            else:
-                return False, f'Model/scaler files not found'
-        else:
-            return False, f'{path} path not exist'
-
-    def build_model(self , input_data):
+    def build_model(self, input_data):
         self.data = input_data
         X, y = self.preprocessing_data(self.data)
         return self.create_model(X, y)
 
 
 if __name__ == '__main__':
-    data = [i for i in range(1000)]
-
-    test = [900, 901, 902, 903, 904, 905, 906, 907, 908, 909]
-    LSTM_B = ModelBuilder('n15', 'sanjay/', data, 100)
-    # LSTM_B.build_model()
-    LSTM_B.predict(test , 'sanjay/20250109105209/')
+    # data = [i for i in range(1000)]
+    #
+    # test = [900, 901, 902, 903, 904, 905, 906, 907, 908, 909]
+    # LSTM_B = ModelBuilder('n15', 'sanjay/', data, 100)
+    # # LSTM_B.build_model()
+    A = predictor([3.0, 3.25, 3.5, 3.75, 4.0, 4.25, 4.5, 4.75, 5.0, 5.25], 'all_models/AZD/20250128114030/', 10,
+                  no_of_pred=10, result=True)
+    print(A)

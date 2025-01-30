@@ -24,7 +24,7 @@ for date in range(20, 32):
                 minute = '0' + str(minute)
 
             data = {
-                "element_id": "S19",
+                "element_id": "S20",
                 "max": get_random_data(),
                 "min": random.randint(13, 15),
                 "avg": random.randint(16, 21),

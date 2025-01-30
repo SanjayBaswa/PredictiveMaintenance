@@ -38,6 +38,8 @@ class SettingsElement(models.Model):
     machine_code = models.CharField(max_length=255, null=False)
     element_type = models.CharField(max_length=255, null=False)
     model_path = models.CharField(max_length=255, default= 'model not created')
+    upper_anamoly_limit = models.CharField(max_length=255, default= 'model not created')
+    lower_anamoly_limit = models.CharField(max_length=255, default= 'model not created')
     rec_train_data = models.BooleanField(default=False)
     remarks = models.TextField()
     org_id = models.CharField(max_length=255, null=False)

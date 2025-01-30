@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -56,7 +56,7 @@ ROOT_URLCONF = 'AIMaintenance.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -128,7 +128,9 @@ USE_TZ = False
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -147,9 +149,9 @@ SIMPLE_JWT = {
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'  # SMTP server for Gmail
+EMAIL_HOST = 'smtp.office365.com'  # SMTP server for Gmail
 EMAIL_PORT = 587  # TLS port
 EMAIL_USE_TLS = True  # Enable TLS (for secure connection)
-EMAIL_HOST_USER = 'your_email@gmail.com'  # Your email address
-EMAIL_HOST_PASSWORD = 'your_email_password'  # Your email password (or app password if 2FA is enabled)
-DEFAULT_FROM_EMAIL = 'your_email@gmail.com'  # Default from email address
+EMAIL_HOST_USER = 'tealappmailer1@titan.co.in'  # Your email address
+EMAIL_HOST_PASSWORD = 'Teal@2025'  # Your email password (or app password if 2FA is enabled)
+DEFAULT_FROM_EMAIL = 'tealappmailer1@titan.co.in'  # Default from email address

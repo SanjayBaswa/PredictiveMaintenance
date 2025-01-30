@@ -22,16 +22,25 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
 urlpatterns = [
+
+    path('training_screen/', pred.training_screen, name='training_screen'),
+    # path('ajax_sensor-data/', pred.ajax_success_view1, name='ajax_sensor-data'),
+    path('start_training/', pred.start_training, name='start_training'),
+
+    path('model_analysis/', pred.model_analysis, name='model_analysis'),
+    path('get_models/', pred.get_models, name='get_models'),
+    path('model_analysis_chart/', pred.model_evaluation, name='model_evaluation'),
     path('check_server/', pred.is_server_live),
     path('datalog/', pred.datalog),
-    path('sensors/', pred.get_sensor_list),
+    path('pred_sensors/', pred.get_pred_sensor_list),
     path('sensordata/', pred.get_sensor_data),
     path('datalog_sensor/', pred.datalog_sensor_list),
     path('error_log/', pred.error_log),
     path('test/', pred.test_function),
-    path('train_model/', pred.train_model),
-    path('hourly_data/', pred.element_raw_data_hourly),
-    path('predict/', pred.predict_data),
+    path('train_model/', pred.train_model , name = 'train_model'),
+    path('hourly_data/', pred.element_raw_data_hourly_api , name = 'ajax_sensor-data'),
+    path('predict/', pred.prediction),
+    path('delete_all/<str:sensor_id>', pred.delete_all_records),
     # path('anomaly/', pred.anamolay_detector),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
